@@ -24,9 +24,23 @@ const { jobs } = Astro.props;
   const jobs = window.__JOBS_DATA__;
 
   const fuse = new Fuse(jobs, {
-    keys: ['Title', 'Workplace', 'directorate', 'description_text'],
+    keys: [
+      'Title',
+      'Workplace',
+      'directorate',
+      'description_text',
+      'sections',
+      'bullets',
+      'competencies',
+      'Vacancy Type',
+      'hiring_organization',
+      'contract_type',
+      'publication'
+    ],
     threshold: 0.3,
     includeScore: true,
+    ignoreLocation: true,
+    useExtendedSearch: false,
   });
 
   const searchModal = document.getElementById('search-modal');
@@ -106,9 +120,8 @@ const { jobs } = Astro.props;
     height: 100vh;
     z-index: 1000;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding-top: 10vh;
   }
 
   .search-modal-backdrop {
