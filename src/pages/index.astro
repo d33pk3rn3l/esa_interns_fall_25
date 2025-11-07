@@ -19,90 +19,96 @@ const allJobs = await loadJobs();
   </script>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>🚀 ESA Internships Explorer</h1>
-      <p>Explore {allJobs.length} internship opportunities at the European Space Agency</p>
-    </header>
+  <header>
+    <h1>🚀 ESA Internships Explorer</h1>
+    <p>Explore {allJobs.length} internship opportunities at the European Space Agency</p>
+    <div class="search-hint">Press <kbd>Cmd</kbd>+<kbd>K</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> to search</div>
+  </header>
 
-    <main>
-      <section class="graph-section">
-        <JobGraph jobs={allJobs} />
-      </section>
+  <main>
+    <JobGraph jobs={allJobs} />
+  </main>
 
-      <section class="search-section">
-        <h2>Search Opportunities</h2>
-        <Search jobs={allJobs} />
-      </section>
-    </main>
+  <footer>
+    <p>Data sourced from ESA Career Portal | Last updated November 2025</p>
+  </footer>
 
-    <footer>
-      <p>Data sourced from ESA Career Portal | Updated regularly</p>
-    </footer>
-  </div>
+  <Search jobs={allJobs} />
 </body>
 </html>
 
 <style>
   header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     text-align: center;
-    margin-bottom: 2rem;
-    padding: 2rem 0;
-    border-bottom: 2px solid #333;
+    padding: 1.5rem 2rem;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #333;
+    z-index: 100;
   }
 
   header h1 {
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     color: #4a9eff;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
   }
 
   header p {
     color: #aaa;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .search-hint {
+    font-size: 0.85rem;
+    color: #666;
+  }
+
+  .search-hint kbd {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #aaa;
   }
 
   main {
-    display: grid;
-    gap: 2rem;
-    margin-bottom: 2rem;
-  }
-
-  .graph-section {
-    width: 100%;
-  }
-
-  .search-section {
-    width: 100%;
-  }
-
-  .search-section h2 {
-    margin-bottom: 1rem;
-    color: #4a9eff;
+    margin: 0;
+    padding: 0;
   }
 
   footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     text-align: center;
-    padding: 2rem 0;
-    border-top: 2px solid #333;
+    padding: 0.75rem;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #333;
     color: #888;
-    font-size: 0.9rem;
-  }
-
-  @media (min-width: 1200px) {
-    main {
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-    }
+    font-size: 0.85rem;
+    z-index: 100;
   }
 
   @media (max-width: 768px) {
     header h1 {
-      font-size: 1.8rem;
+      font-size: 1.2rem;
     }
     
     header p {
-      font-size: 1rem;
+      font-size: 0.8rem;
+    }
+
+    .search-hint {
+      font-size: 0.75rem;
     }
   }
 </style>

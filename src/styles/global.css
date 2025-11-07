@@ -64,19 +64,8 @@ a:hover {
   background: #555;
 }
 
-/* Layout helpers */
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
 /* Responsive utilities */
 @media (max-width: 768px) {
-  .container {
-    padding: 1rem;
-  }
-  
   #job-graph-svg {
     max-width: 100%;
     height: auto;
