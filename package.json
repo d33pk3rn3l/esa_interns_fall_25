@@ -1,0 +1,21 @@
+{
+  "name": "esa_interns_fall_25",
+  "version": "1.0.0",
+  "description": "For exploration of these opportunities",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "astro": "^5.15.4",
+    "d3": "^7.9.0",
+    "fuse.js": "^7.1.0",
+    "papaparse": "^5.5.3"
+  }
+}

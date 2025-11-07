@@ -1,0 +1,108 @@
+---
+import { loadJobs } from '../lib/jobLoader.js';
+import JobGraph from '../components/JobGraph.astro';
+import Search from '../components/Search.astro';
+import '../styles/global.css';
+
+const allJobs = await loadJobs();
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESA Internships Explorer</title>
+  <meta name="description" content="Explore ESA internship opportunities through interactive visualization and search">
+  <script is:inline define:vars={{ allJobs }}>
+    window.__JOBS_DATA__ = allJobs;
+  </script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚀 ESA Internships Explorer</h1>
+      <p>Explore {allJobs.length} internship opportunities at the European Space Agency</p>
+    </header>
+
+    <main>
+      <section class="graph-section">
+        <JobGraph jobs={allJobs} />
+      </section>
+
+      <section class="search-section">
+        <h2>Search Opportunities</h2>
+        <Search jobs={allJobs} />
+      </section>
+    </main>
+
+    <footer>
+      <p>Data sourced from ESA Career Portal | Updated regularly</p>
+    </footer>
+  </div>
+</body>
+</html>
+
+<style>
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem 0;
+    border-bottom: 2px solid #333;
+  }
+
+  header h1 {
+    font-size: 2.5rem;
+    color: #4a9eff;
+    margin-bottom: 0.5rem;
+  }
+
+  header p {
+    color: #aaa;
+    font-size: 1.1rem;
+  }
+
+  main {
+    display: grid;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .graph-section {
+    width: 100%;
+  }
+
+  .search-section {
+    width: 100%;
+  }
+
+  .search-section h2 {
+    margin-bottom: 1rem;
+    color: #4a9eff;
+  }
+
+  footer {
+    text-align: center;
+    padding: 2rem 0;
+    border-top: 2px solid #333;
+    color: #888;
+    font-size: 0.9rem;
+  }
+
+  @media (min-width: 1200px) {
+    main {
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    header h1 {
+      font-size: 1.8rem;
+    }
+    
+    header p {
+      font-size: 1rem;
+    }
+  }
+</style>
