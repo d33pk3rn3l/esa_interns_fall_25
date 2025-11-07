@@ -1,0 +1,136 @@
+---
+const { jobs } = Astro.props;
+---
+
+<div class="search-container">
+  <input 
+    type="search" 
+    id="search-box" 
+    placeholder="Search jobs by title, location, directorate, or description..." 
+    autocomplete="off"
+  />
+  <div id="search-results"></div>
+</div>
+
+<script>
+  import Fuse from 'fuse.js';
+
+  const jobs = window.__JOBS_DATA__;
+
+  const fuse = new Fuse(jobs, {
+    keys: ['Title', 'Workplace', 'directorate', 'description_text'],
+    threshold: 0.3,
+    includeScore: true,
+  });
+
+  const searchBox = document.getElementById('search-box');
+  const resultsDiv = document.getElementById('search-results');
+
+  searchBox.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    
+    if (!query) {
+      resultsDiv.innerHTML = '';
+      return;
+    }
+
+    const results = fuse.search(query);
+    
+    if (results.length === 0) {
+      resultsDiv.innerHTML = '<p class="no-results">No jobs found matching your search.</p>';
+      return;
+    }
+
+    resultsDiv.innerHTML = results.slice(0, 10).map(({ item }) => `
+      <div class="result-card">
+        <h3>${item.Title || 'Untitled Position'}</h3>
+        <div class="result-meta">
+          <span class="location">📍 ${item.Workplace || 'N/A'}</span>
+          <span class="directorate">🏢 ${item.directorate || 'N/A'}</span>
+        </div>
+        ${item['Closing Date'] ? `<div class="closing-date">⏰ Closes: ${item['Closing Date']}</div>` : ''}
+        <a href="${item.Link || '#'}" target="_blank" rel="noopener noreferrer" class="apply-link">View Details →</a>
+      </div>
+    `).join('');
+  });
+</script>
+
+<style>
+  .search-container {
+    width: 100%;
+  }
+
+  #search-box {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    border: 2px solid #444;
+    border-radius: 8px;
+    background: #1a1a1a;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  #search-box:focus {
+    border-color: #4a9eff;
+  }
+
+  #search-results {
+    margin-top: 1rem;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .result-card {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .result-card:hover {
+    transform: translateY(-2px);
+    border-color: #4a9eff;
+  }
+
+  .result-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #4a9eff;
+    font-size: 1.1rem;
+  }
+
+  .result-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #aaa;
+  }
+
+  .closing-date {
+    font-size: 0.85rem;
+    color: #ff9966;
+    margin-bottom: 0.5rem;
+  }
+
+  .apply-link {
+    display: inline-block;
+    color: #4a9eff;
+    text-decoration: none;
+    font-weight: 500;
+    margin-top: 0.5rem;
+  }
+
+  .apply-link:hover {
+    text-decoration: underline;
+  }
+
+  .no-results {
+    color: #888;
+    text-align: center;
+    padding: 2rem;
+  }
+</style>

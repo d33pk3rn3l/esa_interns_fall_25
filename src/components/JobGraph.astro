@@ -1,0 +1,243 @@
+---
+const { jobs } = Astro.props;
+---
+
+<div class="graph-container">
+  <h2>ESA Internship Network</h2>
+  <svg id="job-graph-svg"></svg>
+</div>
+
+<script>
+  import * as d3 from 'd3';
+
+  const jobs = window.__JOBS_DATA__;
+
+  // Process jobs into D3-compatible nodes and links
+  const processData = (jobs) => {
+    const nodes = [];
+    const links = [];
+    
+    // Create center node
+    const centerNode = { id: 'ESA', type: 'center', label: 'ESA' };
+    nodes.push(centerNode);
+    
+    // Extract unique locations and directorates
+    const locations = new Set();
+    const directorates = new Set();
+    
+    jobs.forEach(job => {
+      if (job.Workplace) locations.add(job.Workplace);
+      if (job.directorate) directorates.add(job.directorate);
+    });
+    
+    // Create location nodes
+    locations.forEach(location => {
+      nodes.push({ id: location, type: 'location', label: location });
+      links.push({ source: 'ESA', target: location });
+    });
+    
+    // Create directorate nodes
+    directorates.forEach(directorate => {
+      nodes.push({ id: directorate, type: 'directorate', label: directorate });
+      links.push({ source: 'ESA', target: directorate });
+    });
+    
+    // Create job nodes and their links
+    jobs.forEach((job, index) => {
+      const jobId = `job-${index}`;
+      nodes.push({
+        id: jobId,
+        type: 'job',
+        label: job.Title || 'Untitled',
+        data: job
+      });
+      
+      // Link job to location
+      if (job.Workplace) {
+        links.push({ source: jobId, target: job.Workplace });
+      }
+      
+      // Link job to directorate
+      if (job.directorate) {
+        links.push({ source: jobId, target: job.directorate });
+      }
+    });
+    
+    return { nodes, links };
+  };
+
+  const { nodes, links } = processData(jobs);
+  
+  // Set up SVG dimensions
+  const width = 1200;
+  const height = 800;
+  
+  const svg = d3.select('#job-graph-svg')
+    .attr('width', width)
+    .attr('height', height)
+    .attr('viewBox', [0, 0, width, height]);
+  
+  // Create color scale based on node type
+  const colorScale = {
+    center: '#ffffff',
+    location: '#4a9eff',
+    directorate: '#66cc99',
+    job: '#888888'
+  };
+  
+  // Create radius scale based on node type
+  const radiusScale = {
+    center: 20,
+    location: 12,
+    directorate: 12,
+    job: 5
+  };
+  
+  // Set up force simulation
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
+      // Make center connections longer
+      if (d.source.id === 'ESA' || d.target.id === 'ESA') return 150;
+      return 50;
+    }))
+    .force('charge', d3.forceManyBody().strength(d => {
+      if (d.type === 'center') return -3000;
+      if (d.type === 'location' || d.type === 'directorate') return -500;
+      return -30;
+    }))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => radiusScale[d.type] + 2));
+  
+  // Create links
+  const link = svg.append('g')
+    .attr('class', 'links')
+    .selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('stroke', '#444')
+    .attr('stroke-opacity', 0.3)
+    .attr('stroke-width', 1);
+  
+  // Create nodes
+  const node = svg.append('g')
+    .attr('class', 'nodes')
+    .selectAll('circle')
+    .data(nodes)
+    .join('circle')
+    .attr('r', d => radiusScale[d.type])
+    .attr('fill', d => colorScale[d.type])
+    .attr('stroke', d => d.type === 'center' ? '#4a9eff' : 'none')
+    .attr('stroke-width', d => d.type === 'center' ? 3 : 0)
+    .call(d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended));
+  
+  // Add tooltips
+  const tooltip = d3.select('body')
+    .append('div')
+    .attr('class', 'd3-tooltip')
+    .style('position', 'absolute')
+    .style('visibility', 'hidden')
+    .style('background', '#1a1a1a')
+    .style('color', '#fff')
+    .style('padding', '0.5rem')
+    .style('border-radius', '4px')
+    .style('border', '1px solid #444')
+    .style('font-size', '0.85rem')
+    .style('pointer-events', 'none')
+    .style('z-index', '1000');
+  
+  node
+    .on('mouseover', (event, d) => {
+      tooltip.style('visibility', 'visible');
+      if (d.type === 'job') {
+        tooltip.html(`
+          <strong>${d.label}</strong><br/>
+          Location: ${d.data.Workplace || 'N/A'}<br/>
+          Directorate: ${d.data.directorate || 'N/A'}
+        `);
+      } else {
+        tooltip.html(`<strong>${d.label}</strong>`);
+      }
+    })
+    .on('mousemove', (event) => {
+      tooltip
+        .style('top', (event.pageY - 10) + 'px')
+        .style('left', (event.pageX + 10) + 'px');
+    })
+    .on('mouseout', () => {
+      tooltip.style('visibility', 'hidden');
+    });
+  
+  // Add labels for center, location, and directorate nodes
+  const labels = svg.append('g')
+    .attr('class', 'labels')
+    .selectAll('text')
+    .data(nodes.filter(d => d.type !== 'job'))
+    .join('text')
+    .text(d => d.label)
+    .attr('font-size', d => d.type === 'center' ? '14px' : '10px')
+    .attr('font-weight', d => d.type === 'center' ? 'bold' : 'normal')
+    .attr('fill', '#fff')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => d.type === 'center' ? 30 : 20);
+  
+  // Update positions on simulation tick
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    node
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y);
+    
+    labels
+      .attr('x', d => d.x)
+      .attr('y', d => d.y);
+  });
+  
+  // Drag functions
+  function dragstarted(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+  
+  function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+  
+  function dragended(event, d) {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
+</script>
+
+<style>
+  .graph-container {
+    width: 100%;
+    background: #0a0a0a;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid #333;
+  }
+
+  .graph-container h2 {
+    margin: 0 0 1rem 0;
+    color: #4a9eff;
+    text-align: center;
+  }
+
+  #job-graph-svg {
+    display: block;
+    margin: 0 auto;
+    background: #0a0a0a;
+    border-radius: 4px;
+  }
+</style>
