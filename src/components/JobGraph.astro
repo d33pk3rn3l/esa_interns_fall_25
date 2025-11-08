@@ -4,7 +4,29 @@ const { jobs } = Astro.props;
 
 <div class="graph-container">
   <h2>ESA Internship Network</h2>
+  <div class="graph-controls">
+    <div class="filter-group">
+      <label>Filter by Location:</label>
+      <select id="location-filter">
+        <option value="">All Locations</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Filter by Directorate:</label>
+      <select id="directorate-filter">
+        <option value="">All Directorates</option>
+      </select>
+    </div>
+    <button id="reset-filters" class="reset-btn">Reset Filters</button>
+  </div>
   <svg id="job-graph-svg"></svg>
+  <div id="job-detail-panel" class="job-detail-panel" style="display: none;">
+    <div class="panel-header">
+      <h3 id="panel-title"></h3>
+      <button id="panel-close" class="panel-close">×</button>
+    </div>
+    <div class="panel-content" id="panel-content"></div>
+  </div>
 </div>
 
 <script>
@@ -12,8 +34,50 @@ const { jobs } = Astro.props;
 
   const jobs = window.__JOBS_DATA__;
 
+  // State for filters
+  let currentFilters = {
+    location: '',
+    directorate: ''
+  };
+
+  // Populate filter dropdowns
+  const populateFilters = (jobs) => {
+    const locations = new Set();
+    const directorates = new Set();
+    
+    jobs.forEach(job => {
+      if (job.Workplace) locations.add(job.Workplace);
+      if (job.directorate) directorates.add(job.directorate);
+    });
+    
+    const locationSelect = document.getElementById('location-filter');
+    const directorateSelect = document.getElementById('directorate-filter');
+    
+    Array.from(locations).sort().forEach(location => {
+      const option = document.createElement('option');
+      option.value = location;
+      option.textContent = location;
+      locationSelect.appendChild(option);
+    });
+    
+    Array.from(directorates).sort().forEach(directorate => {
+      const option = document.createElement('option');
+      option.value = directorate;
+      option.textContent = directorate;
+      directorateSelect.appendChild(option);
+    });
+  };
+
   // Process jobs into D3-compatible nodes and links
-  const processData = (jobs) => {
+  const processData = (jobs, filters = {}) => {
+    // Filter jobs based on current filters
+    let filteredJobs = jobs;
+    if (filters.location) {
+      filteredJobs = filteredJobs.filter(job => job.Workplace === filters.location);
+    }
+    if (filters.directorate) {
+      filteredJobs = filteredJobs.filter(job => job.directorate === filters.directorate);
+    }
     const nodes = [];
     const links = [];
     
@@ -21,11 +85,11 @@ const { jobs } = Astro.props;
     const centerNode = { id: 'ESA', type: 'center', label: 'ESA' };
     nodes.push(centerNode);
     
-    // Extract unique locations and directorates
+    // Extract unique locations and directorates from filtered jobs
     const locations = new Set();
     const directorates = new Set();
     
-    jobs.forEach(job => {
+    filteredJobs.forEach(job => {
       if (job.Workplace) locations.add(job.Workplace);
       if (job.directorate) directorates.add(job.directorate);
     });
@@ -43,7 +107,7 @@ const { jobs } = Astro.props;
     });
     
     // Create job nodes and their links
-    jobs.forEach((job, index) => {
+    filteredJobs.forEach((job, index) => {
       const jobId = `job-${index}`;
       nodes.push({
         id: jobId,
@@ -66,8 +130,9 @@ const { jobs } = Astro.props;
     return { nodes, links };
   };
 
-  const { nodes, links } = processData(jobs);
-  
+  // Initialize filters
+  populateFilters(jobs);
+
   // Set up SVG dimensions to fill the window
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -104,24 +169,35 @@ const { jobs } = Astro.props;
     });
   
   svg.call(zoom);
+
+  let simulation, link, node, labels, tooltip;
+
+  // Function to render the graph
+  const renderGraph = (filters = {}) => {
+    const { nodes, links } = processData(jobs, filters);
+    
+    // Clear existing elements
+    g.selectAll('*').remove();
   
-  // Set up force simulation
-  const simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
-      // Make center connections longer
-      if (d.source.id === 'ESA' || d.target.id === 'ESA') return 150;
-      return 50;
-    }))
-    .force('charge', d3.forceManyBody().strength(d => {
-      if (d.type === 'center') return -3000;
-      if (d.type === 'location' || d.type === 'directorate') return -500;
-      return -30;
-    }))
-    .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(d => radiusScale[d.type] + 2));
-  
-  // Create links
-  const link = g.append('g')
+    // Set up force simulation with improved parameters
+    simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
+        // Make center connections longer
+        if (d.source.id === 'ESA' || d.target.id === 'ESA') return 100;
+        return 30;
+      }))
+      .force('charge', d3.forceManyBody().strength(d => {
+        if (d.type === 'center') return -2000;
+        if (d.type === 'location' || d.type === 'directorate') return -300;
+        return -50;
+      }))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(d => radiusScale[d.type] + 5))
+      .force('x', d3.forceX(width / 2).strength(0.05))
+      .force('y', d3.forceY(height / 2).strength(0.05));
+    
+    // Create links
+    link = g.append('g')
     .attr('class', 'links')
     .selectAll('line')
     .data(links)
@@ -130,8 +206,8 @@ const { jobs } = Astro.props;
     .attr('stroke-opacity', 0.3)
     .attr('stroke-width', 1);
   
-  // Create nodes
-  const node = g.append('g')
+    // Create nodes
+    node = g.append('g')
     .attr('class', 'nodes')
     .selectAll('circle')
     .data(nodes)
@@ -140,13 +216,21 @@ const { jobs } = Astro.props;
     .attr('fill', d => colorScale[d.type])
     .attr('stroke', d => d.type === 'center' ? '#4a9eff' : 'none')
     .attr('stroke-width', d => d.type === 'center' ? 3 : 0)
+    .style('cursor', d => d.type === 'job' ? 'pointer' : 'move')
     .call(d3.drag()
       .on('start', dragstarted)
       .on('drag', dragged)
-      .on('end', dragended));
-  
-  // Add tooltips
-  const tooltip = d3.select('body')
+      .on('end', dragended))
+    .on('click', (event, d) => {
+      if (d.type === 'job') {
+        event.stopPropagation();
+        showJobDetail(d);
+      }
+    });
+    
+    // Add tooltips
+    if (!tooltip) {
+      tooltip = d3.select('body')
     .append('div')
     .attr('class', 'd3-tooltip')
     .style('position', 'absolute')
@@ -159,8 +243,9 @@ const { jobs } = Astro.props;
     .style('font-size', '0.85rem')
     .style('pointer-events', 'none')
     .style('z-index', '1000');
-  
-  node
+    }
+    
+    node
     .on('mouseover', (event, d) => {
       tooltip.style('visibility', 'visible');
       if (d.type === 'job') {
@@ -182,8 +267,8 @@ const { jobs } = Astro.props;
       tooltip.style('visibility', 'hidden');
     });
   
-  // Add labels for center, location, and directorate nodes
-  const labels = g.append('g')
+    // Add labels for center, location, and directorate nodes
+    labels = g.append('g')
     .attr('class', 'labels')
     .selectAll('text')
     .data(nodes.filter(d => d.type !== 'job'))
@@ -194,9 +279,9 @@ const { jobs } = Astro.props;
     .attr('fill', '#fff')
     .attr('text-anchor', 'middle')
     .attr('dy', d => d.type === 'center' ? 30 : 20);
-  
-  // Update positions on simulation tick
-  simulation.on('tick', () => {
+    
+    // Update positions on simulation tick
+    simulation.on('tick', () => {
     link
       .attr('x1', d => d.source.x)
       .attr('y1', d => d.source.y)
@@ -210,6 +295,80 @@ const { jobs } = Astro.props;
     labels
       .attr('x', d => d.x)
       .attr('y', d => d.y);
+    });
+  };
+  
+  // Initial render
+  renderGraph(currentFilters);
+  
+  // Filter change handlers
+  document.getElementById('location-filter').addEventListener('change', (e) => {
+    currentFilters.location = e.target.value;
+    renderGraph(currentFilters);
+  });
+  
+  document.getElementById('directorate-filter').addEventListener('change', (e) => {
+    currentFilters.directorate = e.target.value;
+    renderGraph(currentFilters);
+  });
+  
+  document.getElementById('reset-filters').addEventListener('click', () => {
+    currentFilters = { location: '', directorate: '' };
+    document.getElementById('location-filter').value = '';
+    document.getElementById('directorate-filter').value = '';
+    renderGraph(currentFilters);
+  });
+  
+  // Job detail panel functions
+  const jobDetailPanel = document.getElementById('job-detail-panel');
+  const panelTitle = document.getElementById('panel-title');
+  const panelContent = document.getElementById('panel-content');
+  const panelClose = document.getElementById('panel-close');
+  
+  function showJobDetail(node) {
+    const job = node.data;
+    panelTitle.textContent = job.Title || 'Untitled Position';
+    
+    panelContent.innerHTML = `
+      <div class="detail-section">
+        <strong>📍 Location:</strong> ${job.Workplace || 'N/A'}
+      </div>
+      <div class="detail-section">
+        <strong>🏢 Directorate:</strong> ${job.directorate || 'N/A'}
+      </div>
+      ${job['Closing Date'] ? `
+        <div class="detail-section">
+          <strong>⏰ Closing Date:</strong> ${job['Closing Date']}
+        </div>
+      ` : ''}
+      ${job['Vacancy Type'] ? `
+        <div class="detail-section">
+          <strong>📋 Type:</strong> ${job['Vacancy Type']}
+        </div>
+      ` : ''}
+      ${job.description_text ? `
+        <div class="detail-section">
+          <strong>📄 Description:</strong>
+          <div class="description-text">${job.description_text.substring(0, 500)}${job.description_text.length > 500 ? '...' : ''}</div>
+        </div>
+      ` : ''}
+      <div class="detail-actions">
+        <a href="${job.Link || '#'}" target="_blank" rel="noopener noreferrer" class="detail-link">View Full Details →</a>
+      </div>
+    `;
+    
+    jobDetailPanel.style.display = 'block';
+  }
+  
+  panelClose.addEventListener('click', () => {
+    jobDetailPanel.style.display = 'none';
+  });
+  
+  // Close panel when clicking outside
+  jobDetailPanel.addEventListener('click', (e) => {
+    if (e.target === jobDetailPanel) {
+      jobDetailPanel.style.display = 'none';
+    }
   });
   
   // Drag functions
@@ -254,6 +413,173 @@ const { jobs } = Astro.props;
     background: rgba(10, 10, 10, 0.8);
     padding: 0.5rem 1rem;
     border-radius: 8px;
+  }
+
+  .graph-controls {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 10;
+    background: rgba(26, 26, 26, 0.95);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 200px;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .filter-group label {
+    font-size: 0.85rem;
+    color: #aaa;
+    font-weight: 500;
+  }
+
+  .filter-group select {
+    padding: 0.5rem;
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .filter-group select:hover {
+    border-color: #4a9eff;
+  }
+
+  .reset-btn {
+    padding: 0.5rem 1rem;
+    background: #4a9eff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .reset-btn:hover {
+    background: #6bb3ff;
+  }
+
+  .job-detail-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid #444;
+    z-index: 200;
+    overflow-y: auto;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .panel-header {
+    position: sticky;
+    top: 0;
+    background: #1a1a1a;
+    padding: 1.5rem;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .panel-header h3 {
+    margin: 0;
+    color: #4a9eff;
+    font-size: 1.2rem;
+    flex: 1;
+  }
+
+  .panel-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+
+  .panel-close:hover {
+    color: #fff;
+  }
+
+  .panel-content {
+    padding: 1.5rem;
+  }
+
+  .detail-section {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #333;
+  }
+
+  .detail-section:last-of-type {
+    border-bottom: none;
+  }
+
+  .detail-section strong {
+    color: #4a9eff;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .description-text {
+    color: #aaa;
+    line-height: 1.6;
+    margin-top: 0.5rem;
+  }
+
+  .detail-actions {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #333;
+  }
+
+  .detail-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #4a9eff;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+
+  .detail-link:hover {
+    background: #6bb3ff;
+  }
+
+  @media (max-width: 768px) {
+    .graph-controls {
+      font-size: 0.85rem;
+      min-width: 150px;
+    }
+
+    .job-detail-panel {
+      width: 100%;
+    }
   }
 
   #job-graph-svg {
