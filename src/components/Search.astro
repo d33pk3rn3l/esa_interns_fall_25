@@ -39,6 +39,7 @@ const { jobs } = Astro.props;
     ],
     threshold: 0.3,
     includeScore: true,
+    includeMatches: true,
     ignoreLocation: true,
     useExtendedSearch: false,
   });
@@ -82,6 +83,33 @@ const { jobs } = Astro.props;
     resultsDiv.innerHTML = '';
   }
 
+  function highlightMatches(text, matches) {
+    if (!text || !matches || matches.length === 0) return text;
+    
+    // Sort matches by index in descending order to avoid index shifting
+    const sortedMatches = [...matches].sort((a, b) => b[0] - a[0]);
+    
+    let result = text;
+    for (const [start, end] of sortedMatches) {
+      const before = result.substring(0, start);
+      const match = result.substring(start, end + 1);
+      const after = result.substring(end + 1);
+      result = before + '<mark>' + match + '</mark>' + after;
+    }
+    
+    return result;
+  }
+
+  function getHighlightedText(item, matches, key) {
+    const value = item[key];
+    if (!value) return value || 'N/A';
+    
+    const matchesForKey = matches?.filter(m => m.key === key);
+    if (!matchesForKey || matchesForKey.length === 0) return value;
+    
+    return highlightMatches(value, matchesForKey[0].indices);
+  }
+
   searchBox.addEventListener('input', (e) => {
     const query = e.target.value.trim();
     
@@ -97,12 +125,12 @@ const { jobs } = Astro.props;
       return;
     }
 
-    resultsDiv.innerHTML = results.slice(0, 10).map(({ item }) => `
+    resultsDiv.innerHTML = results.slice(0, 10).map(({ item, matches }) => `
       <div class="result-card">
-        <h3>${item.Title || 'Untitled Position'}</h3>
+        <h3>${getHighlightedText(item, matches, 'Title') || 'Untitled Position'}</h3>
         <div class="result-meta">
-          <span class="location">📍 ${item.Workplace || 'N/A'}</span>
-          <span class="directorate">🏢 ${item.directorate || 'N/A'}</span>
+          <span class="location">📍 ${getHighlightedText(item, matches, 'Workplace') || 'N/A'}</span>
+          <span class="directorate">🏢 ${getHighlightedText(item, matches, 'directorate') || 'N/A'}</span>
         </div>
         ${item['Closing Date'] ? `<div class="closing-date">⏰ Closes: ${item['Closing Date']}</div>` : ''}
         <a href="${item.Link || '#'}" target="_blank" rel="noopener noreferrer" class="apply-link">View Details →</a>
@@ -119,7 +147,10 @@ const { jobs } = Astro.props;
     width: 100vw;
     height: 100vh;
     z-index: 1000;
-    display: flex;
+  }
+
+  .search-modal[style*="display: block"] {
+    display: flex !important;
     align-items: center;
     justify-content: center;
   }
@@ -245,5 +276,13 @@ const { jobs } = Astro.props;
     color: #888;
     text-align: center;
     padding: 2rem;
+  }
+
+  mark {
+    background: #ff9966;
+    color: #000;
+    padding: 0.1rem 0.2rem;
+    border-radius: 2px;
+    font-weight: 500;
   }
 </style>
