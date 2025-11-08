@@ -110,6 +110,39 @@ const { jobs } = Astro.props;
     return highlightMatches(value, matchesForKey[0].indices);
   }
 
+  function getDescriptionSnippet(item, matches) {
+    // Look for matches in description_text, sections, or bullets
+    const descriptionKeys = ['description_text', 'sections', 'bullets'];
+    let snippet = '';
+    
+    for (const key of descriptionKeys) {
+      const matchesForKey = matches?.filter(m => m.key === key);
+      if (matchesForKey && matchesForKey.length > 0 && item[key]) {
+        const text = item[key];
+        const matchIndices = matchesForKey[0].indices[0];
+        if (matchIndices) {
+          const [start, end] = matchIndices;
+          // Extract context around the match (100 chars before and after)
+          const contextStart = Math.max(0, start - 100);
+          const contextEnd = Math.min(text.length, end + 100);
+          let context = text.substring(contextStart, contextEnd);
+          
+          // Add ellipsis if truncated
+          if (contextStart > 0) context = '...' + context;
+          if (contextEnd < text.length) context = context + '...';
+          
+          // Highlight the match within the snippet
+          const relativeStart = start - contextStart + (contextStart > 0 ? 3 : 0);
+          const relativeEnd = end - contextStart + (contextStart > 0 ? 3 : 0);
+          snippet = highlightMatches(context, [[relativeStart, relativeEnd]]);
+          break;
+        }
+      }
+    }
+    
+    return snippet;
+  }
+
   searchBox.addEventListener('input', (e) => {
     const query = e.target.value.trim();
     
@@ -125,17 +158,21 @@ const { jobs } = Astro.props;
       return;
     }
 
-    resultsDiv.innerHTML = results.slice(0, 10).map(({ item, matches }) => `
-      <div class="result-card">
-        <h3>${getHighlightedText(item, matches, 'Title') || 'Untitled Position'}</h3>
-        <div class="result-meta">
-          <span class="location">📍 ${getHighlightedText(item, matches, 'Workplace') || 'N/A'}</span>
-          <span class="directorate">🏢 ${getHighlightedText(item, matches, 'directorate') || 'N/A'}</span>
+    resultsDiv.innerHTML = results.slice(0, 10).map(({ item, matches }) => {
+      const snippet = getDescriptionSnippet(item, matches);
+      return `
+        <div class="result-card">
+          <h3>${getHighlightedText(item, matches, 'Title') || 'Untitled Position'}</h3>
+          <div class="result-meta">
+            <span class="location">📍 ${getHighlightedText(item, matches, 'Workplace') || 'N/A'}</span>
+            <span class="directorate">🏢 ${getHighlightedText(item, matches, 'directorate') || 'N/A'}</span>
+          </div>
+          ${snippet ? `<div class="description-snippet">${snippet}</div>` : ''}
+          ${item['Closing Date'] ? `<div class="closing-date">⏰ Closes: ${item['Closing Date']}</div>` : ''}
+          <a href="${item.Link || '#'}" target="_blank" rel="noopener noreferrer" class="apply-link">View Details →</a>
         </div>
-        ${item['Closing Date'] ? `<div class="closing-date">⏰ Closes: ${item['Closing Date']}</div>` : ''}
-        <a href="${item.Link || '#'}" target="_blank" rel="noopener noreferrer" class="apply-link">View Details →</a>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   });
 </script>
 
@@ -254,6 +291,14 @@ const { jobs } = Astro.props;
     color: #aaa;
   }
 
+  .description-snippet {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
   .closing-date {
     font-size: 0.85rem;
     color: #ff9966;
@@ -279,8 +324,8 @@ const { jobs } = Astro.props;
   }
 
   mark {
-    background: #ff9966;
-    color: #000;
+    background: rgba(74, 158, 255, 0.3);
+    color: #fff;
     padding: 0.1rem 0.2rem;
     border-radius: 2px;
     font-weight: 500;
