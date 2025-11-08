@@ -81,10 +81,6 @@ const { jobs } = Astro.props;
     const nodes = [];
     const links = [];
     
-    // Create center node
-    const centerNode = { id: 'ESA', type: 'center', label: 'ESA' };
-    nodes.push(centerNode);
-    
     // Extract unique locations and directorates from filtered jobs
     const locations = new Set();
     const directorates = new Set();
@@ -94,16 +90,14 @@ const { jobs } = Astro.props;
       if (job.directorate) directorates.add(job.directorate);
     });
     
-    // Create location nodes
+    // Create location nodes (as main nodes)
     locations.forEach(location => {
       nodes.push({ id: location, type: 'location', label: location });
-      links.push({ source: 'ESA', target: location });
     });
     
-    // Create directorate nodes
+    // Create directorate nodes (as main nodes)
     directorates.forEach(directorate => {
       nodes.push({ id: directorate, type: 'directorate', label: directorate });
-      links.push({ source: 'ESA', target: directorate });
     });
     
     // Create job nodes and their links
@@ -181,13 +175,8 @@ const { jobs } = Astro.props;
   
     // Set up force simulation with improved parameters
     simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
-        // Make center connections longer
-        if (d.source.id === 'ESA' || d.target.id === 'ESA') return 100;
-        return 30;
-      }))
+      .force('link', d3.forceLink(links).id(d => d.id).distance(30))
       .force('charge', d3.forceManyBody().strength(d => {
-        if (d.type === 'center') return -2000;
         if (d.type === 'location' || d.type === 'directorate') return -300;
         return -50;
       }))
@@ -214,8 +203,6 @@ const { jobs } = Astro.props;
     .join('circle')
     .attr('r', d => radiusScale[d.type])
     .attr('fill', d => colorScale[d.type])
-    .attr('stroke', d => d.type === 'center' ? '#4a9eff' : 'none')
-    .attr('stroke-width', d => d.type === 'center' ? 3 : 0)
     .style('cursor', d => d.type === 'job' ? 'pointer' : 'move')
     .call(d3.drag()
       .on('start', dragstarted)
@@ -267,18 +254,18 @@ const { jobs } = Astro.props;
       tooltip.style('visibility', 'hidden');
     });
   
-    // Add labels for center, location, and directorate nodes
+    // Add labels for location and directorate nodes
     labels = g.append('g')
     .attr('class', 'labels')
     .selectAll('text')
     .data(nodes.filter(d => d.type !== 'job'))
     .join('text')
     .text(d => d.label)
-    .attr('font-size', d => d.type === 'center' ? '14px' : '10px')
-    .attr('font-weight', d => d.type === 'center' ? 'bold' : 'normal')
+    .attr('font-size', '10px')
+    .attr('font-weight', 'normal')
     .attr('fill', '#fff')
     .attr('text-anchor', 'middle')
-    .attr('dy', d => d.type === 'center' ? 30 : 20);
+    .attr('dy', 20);
     
     // Update positions on simulation tick
     simulation.on('tick', () => {
@@ -417,7 +404,7 @@ const { jobs } = Astro.props;
 
   .graph-controls {
     position: absolute;
-    top: 1rem;
+    top: 7rem;
     left: 1rem;
     z-index: 10;
     background: rgba(26, 26, 26, 0.95);
