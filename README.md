@@ -1,7 +1,3 @@
-Here is a focused, technical README for your GitHub repository.
-
------
-
 # ESA Internships Explorer
 
 A static site for exploring ESA internship data, featuring a D3.js force-directed graph and client-side fuzzy search.
