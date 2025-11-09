@@ -39,3 +39,15 @@ npm run build
 ```
 
 Or just use GitHub Actions
+
+## Disclaimer
+
+This website is an independent, personal project and is not affiliated with, endorsed by, or in any way officially connected with the European Space Agency (ESA) or ETH Zürich.
+
+All information (including internship listings, descriptions, and locations) is sourced from publicly available data on the official ESA Career Portal. While efforts are made to ensure the information is accurate and up-to-date, no guarantees are made regarding the completeness, accuracy, reliability, or timeliness of the data presented.
+
+This site is provided "as-is" and "as-available" without any warranties, express or implied. The creator of this site assumes no liability for any errors, omissions, or for any actions taken or decisions made based on the information provided herein.
+
+Users are strongly advised to verify all information directly on the official ESA Career Portal before making any decisions or applications.
+
+All trademarks, service marks, and logos (e.g., "ESA") are the property of their respective owners.
