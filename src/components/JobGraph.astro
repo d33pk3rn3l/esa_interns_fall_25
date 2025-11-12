@@ -356,9 +356,19 @@ const { jobs } = Astro.props;
     jobDetailPanel.style.display = 'none';
   });
   
-  // Close panel when clicking outside
-  jobDetailPanel.addEventListener('click', (e) => {
-    if (e.target === jobDetailPanel) {
+  // Close panel when clicking outside or on empty space
+  document.addEventListener('click', (e) => {
+    // Check if panel is open and click is outside the panel content
+    if (jobDetailPanel.style.display === 'block' && 
+        !jobDetailPanel.contains(e.target) &&
+        e.target.tagName !== 'circle') { // Don't close when clicking job nodes
+      jobDetailPanel.style.display = 'none';
+    }
+  });
+
+  // Close panel when pressing Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && jobDetailPanel.style.display === 'block') {
       jobDetailPanel.style.display = 'none';
     }
   });
@@ -534,6 +544,13 @@ const { jobs } = Astro.props;
     z-index: 200;
     overflow-y: auto;
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+    padding-top: 6.5rem;
+    box-sizing: border-box;
+  }
+
+  /* Remove padding in fullscreen mode */
+  .graph-container:fullscreen .job-detail-panel {
+    padding-top: 0;
   }
 
   .panel-header {
